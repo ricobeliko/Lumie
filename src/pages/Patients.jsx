@@ -14,6 +14,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import EmptyState from '@/components/shared/EmptyState';
 import PatientFormDialog from '@/components/patients/PatientFormDialog';
 import { formatCurrency } from '@/lib/utils/time';
+import { toast } from '@/components/ui/use-toast';
 
 export default function Patients() {
   const { user } = useAuth();
@@ -24,33 +25,78 @@ export default function Patients() {
   const [search, setSearch] = useState('');
 
   const { data: patients = [], isLoading } = useQuery({
-    queryKey: ['patients', user?.email],
-    queryFn: () => base44.entities.Patient.filter({ created_by: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['patients', user?.uid],
+    queryFn: () => base44.entities.Patient.list(),
+    enabled: !!user?.uid,
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Patient.create(data),
-    onSuccess: () => {
+    onSuccess: (savedPatient) => {
+      queryClient.setQueryData(['patients', user?.uid], (current = []) => {
+        const safeCurrent = Array.isArray(current) ? current : [];
+        return [savedPatient, ...safeCurrent.filter((p) => p.id !== savedPatient?.id)];
+      });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       setDialogOpen(false);
+      toast({
+        title: 'Paciente cadastrado',
+        description: 'O paciente foi salvo com sucesso.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao cadastrar paciente',
+        description: error?.message || 'Nao foi possivel salvar. Verifique sua conexao e permissoes.',
+        variant: 'destructive',
+      });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Patient.update(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedPatient) => {
+      queryClient.setQueryData(['patients', user?.uid], (current = []) => {
+        const safeCurrent = Array.isArray(current) ? current : [];
+        return safeCurrent.map((p) => (p.id === updatedPatient?.id ? { ...p, ...updatedPatient } : p));
+      });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       setDialogOpen(false);
       setEditingPatient(null);
+      toast({
+        title: 'Paciente atualizado',
+        description: 'As alteracoes foram salvas com sucesso.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao atualizar paciente',
+        description: error?.message || 'Nao foi possivel atualizar este paciente.',
+        variant: 'destructive',
+      });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Patient.delete(id),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData(['patients', user?.uid], (current = []) => {
+        const safeCurrent = Array.isArray(current) ? current : [];
+        return safeCurrent.filter((p) => p.id !== deletedId);
+      });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       setDeleteTarget(null);
+      toast({
+        title: 'Paciente excluido',
+        description: 'Cadastro removido com sucesso.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao excluir paciente',
+        description: error?.message || 'Nao foi possivel excluir este paciente.',
+        variant: 'destructive',
+      });
     },
   });
 

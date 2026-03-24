@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -8,25 +8,42 @@ import { ptBR } from 'date-fns/locale';
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
 import { formatCurrency, formatDuration, ROOM_LABELS, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/time';
+import { buildUserAppointments } from '@/lib/utils/appointments';
+import { toDateSafe } from '@/lib/utils/date';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [period, setPeriod] = React.useState('month');
+  const [period, setPeriod] = useState('month');
 
   const { data: appointments = [] } = useQuery({
-    queryKey: ['appointments', user?.email],
-    queryFn: () => base44.entities.Appointment.filter({ professional_email: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['appointments', user?.uid],
+    queryFn: () => base44.entities.Appointment.filter(),
+    enabled: !!user?.uid,
   });
 
   const { data: patients = [] } = useQuery({
-    queryKey: ['patients', user?.email],
-    queryFn: () => base44.entities.Patient.filter({ created_by: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['patients', user?.uid],
+    queryFn: () => base44.entities.Patient.list(),
+    enabled: !!user?.uid,
   });
+
+  const { data: allBookings = [] } = useQuery({
+    queryKey: ['all-appointments'],
+    queryFn: () => base44.entities.Appointment.list(),
+    enabled: !!user?.uid,
+  });
+
+  const patientRateById = useMemo(
+    () => new Map(patients.map((p) => [p.id, Number(p.hourly_rate || 0)])),
+    [patients]
+  );
+
+  const dashboardAppointments = useMemo(() => {
+    return buildUserAppointments(appointments, allBookings, user, patientRateById);
+  }, [appointments, allBookings, user?.uid, user?.email, patientRateById]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -39,9 +56,9 @@ export default function Dashboard() {
       end = endOfMonth(now);
     }
 
-    const filtered = appointments.filter((a) => {
-      const d = new Date(a.date);
-      return d >= start && d <= end;
+    const filtered = dashboardAppointments.filter((a) => {
+      const d = toDateSafe(a.date);
+      return d && d >= start && d <= end;
     });
 
     const realized = filtered.filter((a) => a.status === 'realizado');
@@ -49,15 +66,19 @@ export default function Dashboard() {
     const totalValue = realized.reduce((sum, a) => sum + (a.total_value || 0), 0);
     const scheduled = filtered.filter((a) => a.status === 'agendado').length;
 
-    return { totalMinutes, totalValue, scheduled, total: filtered.length, realized: realized.length };
-  }, [appointments, period]);
+    return { totalMinutes, totalValue, scheduled };
+  }, [dashboardAppointments, period]);
 
   const todayAppointments = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    return appointments
-      .filter((a) => a.date === today && a.status !== 'cancelado')
+    return dashboardAppointments
+      .filter((a) => {
+        const d = toDateSafe(a.date);
+        if (!d) return false;
+        return format(d, 'yyyy-MM-dd') === today && a.status !== 'cancelado';
+      })
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [appointments]);
+  }, [dashboardAppointments]);
 
   return (
     <div>

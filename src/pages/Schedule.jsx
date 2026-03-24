@@ -2,16 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, ChevronLeft, ChevronRight, Calendar, Check, X } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/shared/PageHeader';
-import EmptyState from '@/components/shared/EmptyState';
 import AppointmentFormDialog from '@/components/appointments/AppointmentFormDialog';
-import { ROOM_LABELS, STATUS_LABELS, STATUS_COLORS, formatDuration, formatCurrency } from '@/lib/utils/time';
+import { isAppointmentOwnedByUser } from '@/lib/utils/appointments';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -37,15 +35,15 @@ export default function Schedule() {
 
   // User's appointments
   const { data: myAppointments = [] } = useQuery({
-    queryKey: ['appointments', user?.email],
-    queryFn: () => base44.entities.Appointment.filter({ professional_email: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['appointments', user?.uid],
+    queryFn: () => base44.entities.Appointment.filter(),
+    enabled: !!user?.uid,
   });
 
   const { data: patients = [] } = useQuery({
-    queryKey: ['patients', user?.email],
-    queryFn: () => base44.entities.Patient.filter({ created_by: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['patients', user?.uid],
+    queryFn: () => base44.entities.Patient.list(),
+    enabled: !!user?.uid,
   });
 
   const createMutation = useMutation({
@@ -171,9 +169,7 @@ export default function Schedule() {
                 return (
                   <div key={day.toISOString()} className="p-1 border-r border-border last:border-r-0 min-h-[52px] relative">
                     {slotApts.map((apt) => {
-                      const isMine = apt.ownerUid
-                        ? apt.ownerUid === user?.uid
-                        : apt.professional_email === user?.email;
+                      const isMine = isAppointmentOwnedByUser(apt, user);
 
                       const displayPatientName = isMine
                         ? (myAppointmentById.get(apt.id)?.patient_name || apt.patient_name || 'Atendimento')

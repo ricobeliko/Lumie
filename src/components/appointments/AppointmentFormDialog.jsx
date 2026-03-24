@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ export default function AppointmentFormDialog({
     patient_id: '', room: '', date: '', start_time: '', end_time: '',
   });
   const [conflict, setConflict] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (appointment) {
@@ -30,6 +31,7 @@ export default function AppointmentFormDialog({
       setForm({ patient_id: '', room: '', date: '', start_time: '', end_time: '' });
     }
     setConflict(null);
+    setSubmitError('');
   }, [appointment, open]);
 
   // Check for conflicts
@@ -60,8 +62,20 @@ export default function AppointmentFormDialog({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (conflict) return;
+    setSubmitError('');
+
     const patient = patients.find((p) => p.id === form.patient_id);
+    if (!patient) {
+      setSubmitError('Selecione um paciente valido antes de salvar o agendamento.');
+      return;
+    }
+
     const dur = calculateDurationMinutes(form.start_time, form.end_time);
+    if (dur <= 0) {
+      setSubmitError('O horario de termino deve ser maior que o horario de inicio.');
+      return;
+    }
+
     const val = calculateValue(dur, patient.hourly_rate);
 
     onSave({
@@ -82,6 +96,11 @@ export default function AppointmentFormDialog({
           <DialogTitle className="font-display">
             {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
           </DialogTitle>
+          <DialogDescription>
+            {appointment
+              ? 'Ajuste data, horario, sala ou paciente e salve as alteracoes.'
+              : 'Informe paciente, sala e horario para criar um novo agendamento.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -130,6 +149,13 @@ export default function AppointmentFormDialog({
                 Conflito: <strong>{conflict.professional_name}</strong> já agendou{' '}
                 {ROOM_LABELS[conflict.room]} das {conflict.start_time} às {conflict.end_time}.
               </span>
+            </div>
+          )}
+
+          {submitError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{submitError}</span>
             </div>
           )}
 

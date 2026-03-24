@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { DollarSign, Clock, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
 import { formatCurrency, formatDuration, ROOM_LABELS, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils/time';
+import { toDateSafe } from '@/lib/utils/date';
+import { buildUserAppointments } from '@/lib/utils/appointments';
 
 export default function Financial() {
   const { user } = useAuth();
@@ -20,16 +21,31 @@ export default function Financial() {
   const [patientFilter, setPatientFilter] = useState('all');
 
   const { data: appointments = [] } = useQuery({
-    queryKey: ['appointments', user?.email],
-    queryFn: () => base44.entities.Appointment.filter({ professional_email: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['appointments', user?.uid],
+    queryFn: () => base44.entities.Appointment.filter(),
+    enabled: !!user?.uid,
   });
 
   const { data: patients = [] } = useQuery({
-    queryKey: ['patients', user?.email],
-    queryFn: () => base44.entities.Patient.filter({ created_by: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ['patients', user?.uid],
+    queryFn: () => base44.entities.Patient.list(),
+    enabled: !!user?.uid,
   });
+
+  const { data: allBookings = [] } = useQuery({
+    queryKey: ['all-appointments'],
+    queryFn: () => base44.entities.Appointment.list(),
+    enabled: !!user?.uid,
+  });
+
+  const patientRateById = useMemo(
+    () => new Map(patients.map((p) => [p.id, Number(p.hourly_rate || 0)])),
+    [patients]
+  );
+
+  const financeAppointments = useMemo(() => {
+    return buildUserAppointments(appointments, allBookings, user, patientRateById);
+  }, [appointments, allBookings, user?.uid, user?.email, patientRateById]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -42,13 +58,13 @@ export default function Financial() {
       end = endOfMonth(now);
     }
 
-    return appointments.filter((a) => {
-      const d = parseISO(a.date);
-      const inRange = d >= start && d <= end;
+    return financeAppointments.filter((a) => {
+      const d = toDateSafe(a.date);
+      const inRange = !!d && d >= start && d <= end;
       const matchPatient = patientFilter === 'all' || a.patient_id === patientFilter;
       return inRange && matchPatient;
     });
-  }, [appointments, periodFilter, patientFilter]);
+  }, [financeAppointments, periodFilter, patientFilter]);
 
   const realized = filtered.filter((a) => a.status === 'realizado');
   const totalValue = realized.reduce((sum, a) => sum + (a.total_value || 0), 0);
@@ -132,10 +148,10 @@ export default function Financial() {
                 </TableRow>
               ) : (
                 filtered
-                  .sort((a, b) => b.date.localeCompare(a.date) || b.start_time.localeCompare(a.start_time))
+                  .sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.start_time.localeCompare(a.start_time))
                   .map((apt) => (
                     <TableRow key={apt.id}>
-                      <TableCell className="text-sm">{format(parseISO(apt.date), "dd/MM/yy")}</TableCell>
+                      <TableCell className="text-sm">{format(toDateSafe(apt.date) || new Date(), "dd/MM/yy")}</TableCell>
                       <TableCell className="font-medium text-sm">{apt.patient_name}</TableCell>
                       <TableCell className="text-sm hidden sm:table-cell">{ROOM_LABELS[apt.room]}</TableCell>
                       <TableCell className="text-sm">{apt.start_time} – {apt.end_time}</TableCell>

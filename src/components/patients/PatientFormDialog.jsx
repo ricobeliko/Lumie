@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,10 +24,14 @@ export default function PatientFormDialog({ open, onOpenChange, patient, onSave,
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const normalizedRate = String(form.hourly_rate).replace(',', '.');
+    const hourlyRate = Number.parseFloat(normalizedRate);
+    if (!form.name.trim() || Number.isNaN(hourlyRate)) return;
+
     onSave({
-      name: form.name,
-      hourly_rate: parseFloat(form.hourly_rate),
-      notes: form.notes,
+      name: form.name.trim(),
+      hourly_rate: hourlyRate,
+      notes: form.notes?.trim() || '',
     });
   };
 
@@ -36,6 +40,11 @@ export default function PatientFormDialog({ open, onOpenChange, patient, onSave,
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display">{patient ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>
+          <DialogDescription>
+            {patient
+              ? 'Atualize os dados do paciente e salve as alteracoes.'
+              : 'Preencha os dados para cadastrar um novo paciente.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
