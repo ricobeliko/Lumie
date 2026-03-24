@@ -1,0 +1,22 @@
+{
+  "name": "Patient",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do paciente"
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Valor da consulta por hora (R$)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o paciente"
+    }
+  },
+  "required": [
+    "name",
+    "hourly_rate"
+  ]
+}

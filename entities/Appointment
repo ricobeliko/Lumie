@@ -1,0 +1,68 @@
+{
+  "name": "Appointment",
+  "type": "object",
+  "properties": {
+    "patient_id": {
+      "type": "string",
+      "description": "ID do paciente"
+    },
+    "patient_name": {
+      "type": "string",
+      "description": "Nome do paciente (para exibi\u00e7\u00e3o)"
+    },
+    "room": {
+      "type": "string",
+      "enum": [
+        "sala_pequena",
+        "sala_grande"
+      ],
+      "description": "Sala do atendimento"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do atendimento"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Hora de in\u00edcio (HH:mm)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Hora de t\u00e9rmino (HH:mm)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "agendado",
+        "realizado",
+        "cancelado"
+      ],
+      "default": "agendado",
+      "description": "Status do atendimento"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Dura\u00e7\u00e3o em minutos"
+    },
+    "total_value": {
+      "type": "number",
+      "description": "Valor total do atendimento (R$)"
+    },
+    "professional_email": {
+      "type": "string",
+      "description": "Email do profissional respons\u00e1vel"
+    },
+    "professional_name": {
+      "type": "string",
+      "description": "Nome do profissional"
+    }
+  },
+  "required": [
+    "patient_id",
+    "room",
+    "date",
+    "start_time",
+    "end_time"
+  ]
+}

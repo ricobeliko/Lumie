@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pacientes (privado por profissional)
+    match /patients/{patientId} {
+      allow read, create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Atendimentos (privado por profissional; contém dados sensíveis do paciente)
+    match /appointments/{appointmentId} {
+      allow read, create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Ocupação de salas (compartilhado entre profissionais; sem dados sensíveis)
+    // Contém apenas: room, date, start_time, end_time, status e ownerUid/professional_name.
+    match /room_bookings/{bookingId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+  }
+}
+
