@@ -1,15 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
     // Pacientes (privado por profissional)
     match /patients/{patientId} {
-      allow read, create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
 
     // Atendimentos (privado por profissional; contém dados sensíveis do paciente)
     match /appointments/{appointmentId} {
-      allow read, create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
 
@@ -22,4 +25,3 @@ service cloud.firestore {
     }
   }
 }
-

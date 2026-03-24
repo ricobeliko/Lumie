@@ -102,17 +102,25 @@ async function fetchCollection(name, filters = {}) {
    * @returns {Promise<Array<Record<string, any>>>}
    */
   const runQuery = async (queryFilters = {}) => {
-    let q = query(collection(db, name));
-    const keys = Object.keys(queryFilters || {});
+    try {
+      let q = query(collection(db, name));
+      const keys = Object.keys(queryFilters || {});
 
-    for (const key of keys) {
-      const value = queryFilters[key];
-      if (value === undefined) continue;
-      q = query(q, where(key, '==', value));
+      for (const key of keys) {
+        const value = queryFilters[key];
+        if (value === undefined) continue;
+        q = query(q, where(key, '==', value));
+      }
+
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      // Se o Firebase bloquear por falta de permissão na regra legada, 
+      // mostramos um aviso no console e devolvemos um array vazio, 
+      // evitando que o Promise.all falhe e quebre a listagem inteira.
+      console.warn(`Busca bloqueada ou falhou para a coleção ${name}. Filtros:`, queryFilters);
+      return []; 
     }
-
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   };
 
   /**
