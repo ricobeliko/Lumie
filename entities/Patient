@@ -8,11 +8,24 @@
     },
     "hourly_rate": {
       "type": "number",
-      "description": "Valor da consulta por hora (R$)"
+      "description": "Valor da sessão de 50 minutos (R$)"
     },
     "notes": {
       "type": "string",
-      "description": "Observa\u00e7\u00f5es sobre o paciente"
+      "description": "Observações sobre o paciente"
+    },
+    "schedules": {
+      "type": "array",
+      "description": "Lista de horários fixos do paciente",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": { "type": "string", "description": "0=Domingo, 1=Segunda, etc." },
+          "start_time": { "type": "string", "description": "Horário de início, ex: 10:00" },
+          "end_time": { "type": "string", "description": "Horário de término, ex: 10:50" },
+          "room": { "type": "string", "description": "Sala selecionada" }
+        }
+      }
     }
   },
   "required": [

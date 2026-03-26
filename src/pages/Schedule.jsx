@@ -1,14 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, getDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Check, X, CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/shared/PageHeader';
 import AppointmentFormDialog from '@/components/appointments/AppointmentFormDialog';
+import RenewSchedulesDialog from '@/components/appointments/RenewSchedulesDialog';
 import { isAppointmentOwnedByUser } from '@/lib/utils/appointments';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -20,20 +21,20 @@ export default function Schedule() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [renewDialogOpen, setRenewDialogOpen] = useState(false);
   const [editingApt, setEditingApt] = useState(null);
   const [view, setView] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // All appointments for room conflict detection
   const { data: allAppointments = [] } = useQuery({
     queryKey: ['all-appointments'],
     queryFn: () => base44.entities.Appointment.list(),
   });
 
-  // User's appointments
   const { data: myAppointments = [] } = useQuery({
     queryKey: ['appointments', user?.uid],
     queryFn: () => base44.entities.Appointment.filter(),
@@ -45,6 +46,19 @@ export default function Schedule() {
     queryFn: () => base44.entities.Patient.list(),
     enabled: !!user?.uid,
   });
+
+  // Gatilho automático para o dia 27 do mês
+  useEffect(() => {
+    const today = new Date();
+    const dayOfMonth = getDate(today);
+    const hasPrompted = sessionStorage.getItem('lumie_renew_prompted');
+
+    // Se for dia 27 ou mais, e ainda não tivermos avisado nesta sessão, e o usuário tiver pacientes
+    if (dayOfMonth >= 27 && !hasPrompted && patients.length > 0) {
+      setRenewDialogOpen(true);
+      sessionStorage.setItem('lumie_renew_prompted', 'true');
+    }
+  }, [patients.length]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Appointment.create(data),
@@ -77,6 +91,27 @@ export default function Schedule() {
     updateMutation.mutate({ id: apt.id, data: { status: newStatus } });
   };
 
+  // Processa a criação em lote dos agendamentos vindos do RenewSchedulesDialog
+  const handleGenerateSchedules = async (newAppointments) => {
+    setIsGenerating(true);
+    try {
+      // Cria todos os agendamentos no banco em paralelo
+      await Promise.all(
+        newAppointments.map(apt => base44.entities.Appointment.create(apt))
+      );
+      
+      // Atualiza a tela
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['all-appointments'] });
+      setRenewDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao gerar agendamentos em lote:", error);
+      alert("Houve um erro ao gerar alguns agendamentos. Verifique sua conexão.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const navigate = (direction) => {
     const days = view === 'week' ? 7 : 1;
     setCurrentDate((d) => addDays(d, direction * days));
@@ -84,7 +119,7 @@ export default function Schedule() {
 
   const displayDays = view === 'week' ? weekDays : [currentDate];
 
-  // Appointments for current view (all users, for room visualization)
+  // Agora renderiza apenas os agendamentos REAIS (físicos) que estão no banco
   const viewAppointments = useMemo(() => {
     return allAppointments.filter((a) => {
       if (a.status === 'cancelado') return false;
@@ -102,9 +137,14 @@ export default function Schedule() {
         title="Agenda"
         subtitle="Calendário compartilhado de salas"
         actions={
-          <Button onClick={() => { setEditingApt(null); setDialogOpen(true); }}>
-            <Plus className="w-4 h-4 mr-2" /> Agendar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setRenewDialogOpen(true)}>
+              <CalendarPlus className="w-4 h-4 mr-2" /> Renovar Horários
+            </Button>
+            <Button onClick={() => { setEditingApt(null); setDialogOpen(true); }}>
+              <Plus className="w-4 h-4 mr-2" /> Agendar
+            </Button>
+          </div>
         }
       />
 
@@ -133,10 +173,20 @@ export default function Schedule() {
         </Tabs>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="overflow-x-auto border border-border rounded-lg bg-card">
+      {/* Grid do Calendário */}
+      <div className="overflow-x-auto border border-border rounded-lg bg-card relative">
+        {/* Overlay de carregamento quando está gerando em lote */}
+        {isGenerating && (
+          <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-card p-4 rounded-lg shadow-lg border border-border flex items-center gap-3">
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              <span className="text-sm font-medium">Gerando agendamentos reais...</span>
+            </div>
+          </div>
+        )}
+
         <div className="min-w-[600px]">
-          {/* Header */}
+          {/* Cabeçalho */}
           <div className="grid border-b border-border" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
             <div className="p-2 border-r border-border" />
             {displayDays.map((day) => {
@@ -152,7 +202,7 @@ export default function Schedule() {
             })}
           </div>
 
-          {/* Time slots */}
+          {/* Horários */}
           {HOURS.map((hour) => (
             <div key={hour} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: `60px repeat(${displayDays.length}, 1fr)` }}>
               <div className="p-2 text-xs text-muted-foreground text-right pr-3 border-r border-border">
@@ -224,7 +274,7 @@ export default function Schedule() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legenda */}
       <div className="flex flex-wrap gap-4 mt-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-primary/15 border-l-2 border-primary" />
@@ -249,6 +299,16 @@ export default function Schedule() {
         user={user}
         onSave={handleSave}
         isSaving={createMutation.isPending || updateMutation.isPending}
+      />
+
+      {/* Novo componente de Renovação */}
+      <RenewSchedulesDialog
+        open={renewDialogOpen}
+        onOpenChange={setRenewDialogOpen}
+        patients={patients}
+        allAppointments={allAppointments}
+        user={user}
+        onGenerate={handleGenerateSchedules}
       />
     </div>
   );
