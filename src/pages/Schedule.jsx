@@ -225,18 +225,31 @@ export default function Schedule() {
                         ? (myAppointmentById.get(apt.id)?.patient_name || apt.patient_name || 'Atendimento')
                         : 'Ocupado';
 
-                      const displayRoomLine = `${apt.start_time}-${apt.end_time} · ${
-                        apt.room === 'sala_pequena' ? 'SP' : 'SG'
-                      }`;
+                      // Determina a abreviação da sala
+                      const roomAbbreviation = apt.room === 'sala_pequena' 
+                        ? 'SP' 
+                        : apt.room === 'sala_grande' 
+                          ? 'SG' 
+                          : 'SE';
+
+                      const displayRoomLine = `${apt.start_time}-${apt.end_time} · ${roomAbbreviation}`;
+
+                      // Determina as cores baseado na sala
+                      let roomStyle = '';
+                      if (apt.room === 'sala_pequena') {
+                        roomStyle = 'bg-primary/15 text-primary hover:bg-primary/25 border-l-2 border-primary';
+                      } else if (apt.room === 'sala_grande') {
+                        roomStyle = 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-l-2 border-accent';
+                      } else {
+                        // Estilo para Sala Externa (Verde esmeralda para diferenciar)
+                        roomStyle = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 border-l-2 border-emerald-500';
+                      }
+
                       return (
                         <DropdownMenu key={apt.id}>
                           <DropdownMenuTrigger asChild>
                             <button
-                              className={`w-full text-left p-1.5 rounded text-xs mb-0.5 transition-colors ${
-                                apt.room === 'sala_pequena'
-                                  ? 'bg-primary/15 text-primary hover:bg-primary/25 border-l-2 border-primary'
-                                  : 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-l-2 border-accent'
-                              } ${!isMine ? 'opacity-60' : ''}`}
+                              className={`w-full text-left p-1.5 rounded text-xs mb-0.5 transition-colors ${roomStyle} ${!isMine ? 'opacity-60' : ''}`}
                             >
                               <p className="font-medium truncate">{displayPatientName}</p>
                               <p className="opacity-75">{displayRoomLine}</p>
@@ -283,6 +296,10 @@ export default function Schedule() {
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-accent/20 border-l-2 border-accent" />
           Sala Grande
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-emerald-500/15 border-l-2 border-emerald-500" />
+          Sala Externa
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-muted opacity-60" />

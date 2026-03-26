@@ -7,7 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
-import { calculateDurationMinutes, calculateValue, hasTimeConflict, formatDuration, formatCurrency, ROOM_LABELS } from '@/lib/utils/time';
+import { 
+  calculateDurationMinutes, 
+  calculateValue, 
+  hasTimeConflict, 
+  formatDuration, 
+  formatCurrency, 
+  ROOM_LABELS,
+  timeToMinutes, // Importado para usar no cálculo automático
+  minutesToTime  // Importado para usar no cálculo automático
+} from '@/lib/utils/time';
 
 export default function AppointmentFormDialog({
   open, onOpenChange, appointment, patients, allAppointments, user, onSave, isSaving,
@@ -122,6 +131,7 @@ export default function AppointmentFormDialog({
               <SelectContent>
                 <SelectItem value="sala_pequena">Sala Pequena</SelectItem>
                 <SelectItem value="sala_grande">Sala Grande</SelectItem>
+                <SelectItem value="sala_externa">Sala Externa</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -134,11 +144,30 @@ export default function AppointmentFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Início</Label>
-              <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} required />
+              <Input 
+                type="time" 
+                value={form.start_time} 
+                onChange={(e) => {
+                  const newStartTime = e.target.value;
+                  if (newStartTime) {
+                    // Calcula automaticamente +50 minutos
+                    const newEndTime = minutesToTime(timeToMinutes(newStartTime) + 50);
+                    setForm({ ...form, start_time: newStartTime, end_time: newEndTime });
+                  } else {
+                    setForm({ ...form, start_time: '' });
+                  }
+                }} 
+                required 
+              />
             </div>
             <div>
               <Label>Término</Label>
-              <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} required />
+              <Input 
+                type="time" 
+                value={form.end_time} 
+                onChange={(e) => setForm({ ...form, end_time: e.target.value })} 
+                required 
+              />
             </div>
           </div>
 

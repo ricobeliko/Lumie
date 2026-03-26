@@ -4,7 +4,7 @@ export function timeToMinutes(time) {
 }
 
 export function minutesToTime(minutes) {
-  const h = Math.floor(minutes / 60);
+  const h = Math.floor(minutes / 60) % 24; // % 24 garante que não passe de 23:59
   const m = minutes % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
@@ -44,6 +44,7 @@ export function hasTimeConflict(newStart, newEnd, existingStart, existingEnd) {
 export const ROOM_LABELS = {
   sala_pequena: 'Sala Pequena',
   sala_grande: 'Sala Grande',
+  sala_externa: 'Sala Externa', // Mantendo a Sala Externa
 };
 
 export const STATUS_LABELS = {

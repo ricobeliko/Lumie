@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/toast";
 
 export function Toaster() {
-  const { toasts } = useToast();
+  const { toasts, dismiss } = useToast();
 
   return (
     <ToastProvider>
@@ -23,11 +23,12 @@ export function Toaster() {
               )}
             </div>
             {action}
-            <ToastClose />
+            {/* Adicionando a função dismiss ao clique do botão de fechar */}
+            <ToastClose onClick={() => dismiss(id)} />
           </Toast>
         );
       })}
       <ToastViewport />
     </ToastProvider>
   );
-} 
+}

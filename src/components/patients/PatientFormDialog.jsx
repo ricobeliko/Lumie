@@ -183,6 +183,7 @@ export default function PatientFormDialog({ open, onOpenChange, patient, onSave,
                       <SelectContent>
                         <SelectItem value="sala_pequena">Sala Pequena</SelectItem>
                         <SelectItem value="sala_grande">Sala Grande</SelectItem>
+                        <SelectItem value="sala_externa">Sala Externa</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
