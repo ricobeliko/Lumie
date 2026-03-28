@@ -237,12 +237,12 @@ export default function Schedule() {
                       // Determina as cores baseado na sala
                       let roomStyle = '';
                       if (apt.room === 'sala_pequena') {
-                        roomStyle = 'bg-primary/15 text-primary hover:bg-primary/25 border-l-2 border-primary';
+                        roomStyle = 'bg-orange-500/15 text-orange-700 dark:text-orange-400 hover:bg-orange-500/25 border-l-2 border-orange-500';
                       } else if (apt.room === 'sala_grande') {
-                        roomStyle = 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-l-2 border-accent';
+                        roomStyle = 'bg-green-500/15 text-green-700 dark:text-green-400 hover:bg-green-500/25 border-l-2 border-green-500';
                       } else {
-                        // Estilo para Sala Externa (Verde esmeralda para diferenciar)
-                        roomStyle = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 border-l-2 border-emerald-500';
+                        // Estilo para Sala Externa (Roxa)
+                        roomStyle = 'bg-purple-500/15 text-purple-700 dark:text-purple-400 hover:bg-purple-500/25 border-l-2 border-purple-500';
                       }
 
                       return (
@@ -290,15 +290,15 @@ export default function Schedule() {
       {/* Legenda */}
       <div className="flex flex-wrap gap-4 mt-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-primary/15 border-l-2 border-primary" />
+          <div className="w-3 h-3 rounded bg-orange-500/15 border-l-2 border-orange-500" />
           Sala Pequena
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-accent/20 border-l-2 border-accent" />
+          <div className="w-3 h-3 rounded bg-green-500/15 border-l-2 border-green-500" />
           Sala Grande
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-500/15 border-l-2 border-emerald-500" />
+          <div className="w-3 h-3 rounded bg-purple-500/15 border-l-2 border-purple-500" />
           Sala Externa
         </div>
         <div className="flex items-center gap-1.5">

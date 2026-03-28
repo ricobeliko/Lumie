@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
+import { timeToMinutes, minutesToTime } from '@/lib/utils/time';
 
 const DAYS_OF_WEEK = [
   { value: '0', label: 'Domingo' },
@@ -69,12 +70,22 @@ export default function PatientFormDialog({ open, onOpenChange, patient, onSave,
   const updateSchedule = (index, field, value) => {
     const newSchedules = [...form.schedules];
     newSchedules[index][field] = value;
+    
+    // Autocompleta o horário de término (+50 min) quando o horário de início for alterado
+    if (field === 'start_time' && value) {
+      try {
+        const startMins = timeToMinutes(value);
+        newSchedules[index].end_time = minutesToTime(startMins + 50);
+      } catch (e) {
+        // Ignora caso o horário digitado seja inválido durante a digitação
+      }
+    }
+
     setForm({ ...form, schedules: newSchedules });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Alargamos o modal para caber os horários e adicionamos rolagem caso sejam muitos */}
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display">{patient ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>

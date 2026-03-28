@@ -78,7 +78,11 @@ export default function Financial() {
       const d = toDateSafe(a.date);
       const inRange = !!d && d >= start && d <= end;
       const matchPatient = patientFilter === 'all' || a.patient_id === patientFilter;
-      return inRange && matchPatient;
+      
+      // Mantém apenas os agendamentos com status 'realizado'
+      const isRealized = a.status === 'realizado';
+      
+      return inRange && matchPatient && isRealized;
     });
   }, [financeAppointments, periodFilter, patientFilter, customStart, customEnd]);
 
